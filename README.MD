@@ -116,4 +116,27 @@ ollama run phi3 "Poderia resumi textos para mim?"
 
 # 4 Rodando a aplicação com LLM Local
 
-...
+## Extrair textos de PDF
+
+Ler os PDFs na pasta `pdfs` e criar um arquivo `.txt` com o mesmo nome na pasta `resultados`
+
+```bash
+python3 pdf_extractor.py pdfs/
+```
+
+## Sumarizar os textos e criar resumos na pasta `resumos`
+
+```bash
+python3 summarize.py pdfs/
+```
+
+## Parar o serviço
+
+```bash
+sudo systemctl stop ollama.service
+```
+
+## Verificar status
+```bash
+sudo systemctl status ollama.service
+```
