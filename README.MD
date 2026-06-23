@@ -1,4 +1,4 @@
-# 1 Instalando WSL2 cm Ubunto_24.04 no windows
+# 1 Instalando WSL2 com Ubunto_24.04 no windows
 
 ## Verificando versões disponiveis 
 
@@ -82,6 +82,38 @@ pip install pdfplumber
 python3 -c 'import pdfplumber; print("PDFPlumber instalado com sucesso!")'
 ```
 
-#3 Instalando Ollama com Phi3
+# 3 Instalando Ollama com Phi3
 
-#4
+## Instale o curl (se ainda não tiver)
+
+```bash
+sudo apt install curl -y
+```
+
+## Instale o Ollama
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+## Verifique a instalação e versão do Ollama
+
+```bash
+ollama --version
+```
+
+## Baixe o Phi3
+
+```bash
+ollama pull phi3
+```
+
+## Testand o Phi3 no Ollama
+
+```bash
+ollama run phi3 "Poderia resumi textos para mim?"
+```
+
+# 4 Rodando a aplicação com LLM Local
+
+...
