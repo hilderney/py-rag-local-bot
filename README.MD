@@ -1,14 +1,14 @@
-#1 Instalando WSL2 cm Ubunto_24.04 no windows
+# 1 Instalando WSL2 cm Ubunto_24.04 no windows
 
 ## Verificando versões disponiveis 
 
-No Powershell
+No Powershell do Windows
+
 ```bash
 wsl --list --online
 ```
 ## Instalando Ubundo 24.04
 
-No Powershell
 ```bash
 wsl --install -d Ubuntu-24.04
 ```
@@ -17,14 +17,70 @@ wsl --install -d Ubuntu-24.04
   
   ## Verificar a versão instalada
 
-No Powershell
 ```bash
 wsl -l -v
 ```
 
-#2 Instalndo 
+Se quiser deixar como padrão essa versão do Ubunto no WSL
 
-#3 Instalando Python
+```bash
+wsl --set-default Ubuntu-24.04
+```
+
+# 2 Python
+
+## Atualizar os Pacotes do Sistema (exige senha)
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+## Gerenciador de pacotes `pip` e modulo para ambientes virtuais `venv`
+
+Precisa de Python na versão 3 pra rodar.
+
+```bash
+sudo apt install python3 python3-pip python3-venv -y
+```
+
+## Verificar as Instalações
+
+```bash
+python3 --version
+pip3 --version
+```
+
+## Criando ambiente virtual (separando libs do projeto das libs do sistema)
+
+Navegue até a pasta do seu projeto (ex: cd cd /mnt/c/meu-projeto).
+
+```bash
+cd /mnt/c/GIT/ZAPFCOORP/py-rag-local-bot
+```
+
+## Crie o ambiente virtual:
+
+```bash
+python3 -m venv .venv
+```
+
+## Ative o ambiente: (Vai mostrar o .venv no terminal)
+
+```bash
+source .venv/bin/activate
+```
+
+## Instalando as Libs necessárias
+
+```bash
+pip install pdfplumber
+```
+
+## Teste a Instalação
+
+```bash
+python3 -c 'import pdfplumber; print("PDFPlumber instalado com sucesso!")'
+```
 
 #3 Instalando Ollama com Phi3
 
