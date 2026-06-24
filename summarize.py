@@ -6,7 +6,7 @@ from ollama import chat
 
 # MODEL_NAME = "phi3"
 MODEL_NAME = "deepseek-r1:1.5b"
-MAX_CHARS = 18000
+MAX_CHARS = 8000
 
 FORMATO_RESPOSTA = {
     "type": "object",
