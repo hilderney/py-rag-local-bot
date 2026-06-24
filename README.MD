@@ -1,4 +1,4 @@
-# 1 Instalando WSL2 com Ubunto_24.04 no windows
+# 1 Instalando WSL2 com Ubuntu_24.04 no windows
 
 ## Verificando versões disponiveis 
 
@@ -82,6 +82,12 @@ pip install pdfplumber
 python3 -c 'import pdfplumber; print("PDFPlumber instalado com sucesso!")'
 ```
 
+## Ler os PDFs na pasta `pdfs` e criar um arquivo `.txt` com o mesmo nome na pasta `resultados`
+
+```bash
+python3 pdf_extractor.py pdfs/
+```
+
 # 3 Instalando Ollama com Phi3
 
 ## Instale o curl (se ainda não tiver)
@@ -108,26 +114,24 @@ ollama --version
 ollama pull phi3
 ```
 
-## Testand o Phi3 no Ollama
+## Testando o Phi3 no Ollama
 
 ```bash
 ollama run phi3 "Poderia resumi textos para mim?"
 ```
 
-# 4 Rodando a aplicação com LLM Local
-
-## Extrair textos de PDF
-
-Ler os PDFs na pasta `pdfs` e criar um arquivo `.txt` com o mesmo nome na pasta `resultados`
-
-```bash
-python3 pdf_extractor.py pdfs/
-```
+# 4 Rodando a aplicação com LLM Local (Phi3)
 
 ## Sumarizar os textos e criar resumos na pasta `resumos`
 
 ```bash
 python3 summarize.py pdfs/
+```
+
+## Iniciar o serviço
+
+```bash
+sudo systemctl start ollama.service
 ```
 
 ## Parar o serviço
@@ -137,6 +141,7 @@ sudo systemctl stop ollama.service
 ```
 
 ## Verificar status
+
 ```bash
 sudo systemctl status ollama.service
 ```

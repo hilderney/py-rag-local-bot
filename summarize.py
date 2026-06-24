@@ -4,8 +4,9 @@ from pathlib import Path
 
 from ollama import chat
 
-MODEL_NAME = "phi3"
-MAX_CHARS = 8000
+# MODEL_NAME = "phi3"
+MODEL_NAME = "deepseek-r1:1.5b"
+MAX_CHARS = 18000
 
 FORMATO_RESPOSTA = {
     "type": "object",
@@ -32,6 +33,7 @@ def construir_requisicao(texto):
             "Faça um resumo conciso e claro do texto fornecido. "
             "Destaque os pontos principais e as informações mais importantes. "
             "Responda em português do Brasil."
+            "Crie os assuntos como se fossem tags para um sistema de busca."
         ),
         "formato_resposta": {
             "resumo": "string",
@@ -53,18 +55,31 @@ def parse_resposta_json(conteudo):
 
 
 def resumir_texto(texto, modelo=MODEL_NAME):
-    """Envia JSON à LLM e retorna requisição + resposta estruturadas."""
+    """Envia JSON à LLM com stream=True e retorna requisição + resposta estruturadas."""
     requisicao = construir_requisicao(texto)
     mensagem = json.dumps(requisicao, ensure_ascii=False)
 
-    response = chat(
+    # Inicializa a string que vai acumular a resposta completa
+    resposta_completa = ""
+
+    # Itera sobre cada pedaço (chunk) gerado pela LLM
+    for chunk in chat(
         model=modelo,
         messages=[{"role": "user", "content": mensagem}],
-        format=FORMATO_RESPOSTA,
+        stream=True,                     # Mantido
+        format=FORMATO_RESPOSTA,         # Mantido (garante que o final seja JSON)
         options={"temperature": 0.2},
-    )
+    ):
+        # Cada chunk tem a estrutura: {"message": {"content": "texto"}, "done": False/True}
+        if "message" in chunk and "content" in chunk["message"]:
+            resposta_completa += chunk["message"]["content"]
 
-    resposta = parse_resposta_json(response["message"]["content"])
+        # Opcional: se o chunk indicar que acabou, podemos sair do loop mais cedo
+        if chunk.get("done", False):
+            break
+
+    # Agora que temos o JSON completo, fazemos o parse
+    resposta = parse_resposta_json(resposta_completa)
 
     return {
         "modelo": modelo,
