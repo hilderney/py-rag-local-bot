@@ -148,6 +148,8 @@ sudo systemctl status ollama.service
 
 # 5 Rodando a aplicação com OpenRouter
 
+## Necessário configurar sua API_KEY em arquivo .env, veja exemplo no arquivo .env-sample 
+
 ```bash
 pip install python-dotenv openai
 ```
