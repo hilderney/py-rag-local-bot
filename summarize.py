@@ -4,8 +4,8 @@ from pathlib import Path
 
 from ollama import chat
 
-# MODEL_NAME = "phi3"
-MODEL_NAME = "deepseek-r1:1.5b"
+MODEL_NAME = "phi3"
+# MODEL_NAME = "deepseek-r1:1.5b"
 MAX_CHARS = 8000
 
 FORMATO_RESPOSTA = {
@@ -66,7 +66,7 @@ def resumir_texto(texto, modelo=MODEL_NAME):
     for chunk in chat(
         model=modelo,
         messages=[{"role": "user", "content": mensagem}],
-        stream=True,                     # Mantido
+        stream=False,                     # Mantido
         format=FORMATO_RESPOSTA,         # Mantido (garante que o final seja JSON)
         options={"temperature": 0.2},
     ):

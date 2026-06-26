@@ -145,3 +145,13 @@ sudo systemctl stop ollama.service
 ```bash
 sudo systemctl status ollama.service
 ```
+
+# 5 Rodando a aplicação com OpenRouter
+
+```bash
+pip install python-dotenv openai
+```
+
+```bash
+python3 summarize-open-router.py pdfs/
+```
