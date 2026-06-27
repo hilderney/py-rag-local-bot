@@ -4,8 +4,8 @@ from pathlib import Path
 
 from ollama import chat
 
-MODEL_NAME = "phi3"
-# MODEL_NAME = "gemma3:270m"
+# MODEL_NAME = "phi3"
+MODEL_NAME = "gemma3:270m"
 # MODEL_NAME = "deepseek-r1:1.5b"
 
 MAX_CHARS = 8000

@@ -1,159 +1,244 @@
-# 1 Instalando WSL2 com Ubuntu_24.04 no windows
+# PDF Summarizer
 
-## Verificando versões disponiveis 
+Aplicação desktop em Python que extrai texto de arquivos PDF e gera resumos estruturados em JSON usando modelos de linguagem (LLM). O projeto unifica três scripts CLI legados em uma arquitetura modular, testável e preparada para empacotamento futuro como executável Windows.
 
-No Powershell do Windows
+**Repositório:** [ZAPFCOORP/py-rag-local-bot](https://github.com/ZAPFCOORP/py-rag-local-bot)
 
-```bash
-wsl --list --online
-```
-## Instalando Ubundo 24.04
+---
 
-```bash
-wsl --install -d Ubuntu-24.04
-```
+## O que o projeto faz
 
-- Após instalar configurar usuário ADM e SENHA 
-  
-  ## Verificar a versão instalada
+O PDF Summarizer automatiza um pipeline em duas etapas:
 
-```bash
-wsl -l -v
-```
+1. **Extração** — lê todos os `.pdf` de uma pasta de entrada e grava o texto extraído em `{pasta_saida}/resultados/{nome}.txt`
+2. **Resumo** — envia cada texto à LLM e grava o resultado em `{pasta_saida}/resumos/{nome}.json`
 
-Se quiser deixar como padrão essa versão do Ubunto no WSL
+A interface gráfica permite escolher as pastas, configurar o provider de LLM (Ollama local ou OpenRouter), acompanhar o progresso em tempo real e persistir as preferências entre sessões.
 
-```bash
-wsl --set-default Ubuntu-24.04
+```text
+Pasta de PDFs          Pasta de saída
+     │                       │
+     ▼                       ├── resultados/   (*.txt — texto extraído)
+  [PDF 1] ──extract──►      │
+  [PDF 2] ──extract──►      ├── resumos/      (*.json — resumo estruturado)
+     │          │            │
+     └──── LLM ◄┘            └── config em %APPDATA%/PDFSummarizer/
 ```
 
-# 2 Python
+---
 
-## Atualizar os Pacotes do Sistema (exige senha)
+## Arquitetura
 
-```bash
-sudo apt update && sudo apt upgrade -y
+O código segue **Separation of Concerns** em camadas distintas, com **Dependency Inversion** no acesso à LLM (Strategy Pattern). O core e os serviços são testáveis sem GUI.
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│  ui/          CustomTkinter — pastas, provider, log     │
+└──────────────────────────┬──────────────────────────────┘
+                           │ ProgressEvent callbacks
+┌──────────────────────────▼──────────────────────────────┐
+│  services/    PipelineService — orquestra o fluxo       │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+┌───────────────┐  ┌───────────────┐  ┌───────────────────┐
+│ core/pdf/     │  │ core/summary/ │  │ infra/providers/  │
+│ PdfExtractor  │  │ Summarizer    │  │ OllamaProvider    │
+│               │  │ Schema/Parser │  │ OpenRouterProvider│
+└───────────────┘  └───────────────┘  └───────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│  infra/       ConfigStore, FileSystem                   │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Gerenciador de pacotes `pip` e modulo para ambientes virtuais `venv`
+### Decisões de design
 
-Precisa de Python na versão 3 pra rodar.
+| Decisão | Motivo |
+|---------|--------|
+| **Core desacoplado da UI** | Pipeline testável com pytest; GUI apenas consome eventos de progresso |
+| **Strategy Pattern (`LLMProvider`)** | Ollama e OpenRouter compartilham contrato; fácil adicionar novos providers |
+| **Fail-soft por arquivo** | Falha em um PDF não interrompe o lote; estatísticas finais indicam sucessos e falhas |
+| **Config fora do bundle** | `%APPDATA%/PDFSummarizer/config.json` — compatível com PyInstaller (Fase 1) |
+| **Entry point único (`app.py`)** | Um comando para dev e build futuro de `.exe` |
+| **TDD desde a Fase 0** | 31 testes automatizados; cobertura ≥ 80% em `core/` e `services/` |
 
-```bash
-sudo apt install python3 python3-pip python3-venv -y
+### Estrutura de diretórios
+
+```text
+py-rag-local-bot/
+├── app.py                      # Entry point da aplicação
+├── pyproject.toml              # Metadados e configuração pytest/coverage
+├── requirements.txt
+├── requirements-dev.txt
+├── fase0spec.MD                # Especificação técnica (SDD + TDD)
+│
+├── src/pdf_summarizer/
+│   ├── core/                   # Domínio: modelos, exceções, PDF, schema JSON
+│   ├── infra/                  # Config, filesystem, providers LLM
+│   ├── services/               # PipelineService (orquestração)
+│   └── ui/                     # GUI CustomTkinter
+│
+├── tests/                      # Unitários + integração (pytest)
+├── fixtures/                   # PDFs e textos para testes
+└── legacy/                     # Scripts CLI originais (referência)
 ```
 
-## Verificar as Instalações
+---
 
-```bash
-python3 --version
-pip3 --version
+## Bibliotecas
+
+| Biblioteca | Uso |
+|------------|-----|
+| **[pdfplumber](https://github.com/jsvine/pdfplumber)** | Extração de texto de PDFs (páginas concatenadas, UTF-8) |
+| **[ollama](https://github.com/ollama/ollama-python)** | Cliente para LLM local via Ollama (`format` JSON schema) |
+| **[openai](https://github.com/openai/openai-python)** | Cliente compatível com API OpenRouter (`response_format: json_object`) |
+| **[customtkinter](https://github.com/TomSchimansky/CustomTkinter)** | Interface gráfica moderna sobre Tkinter (Windows) |
+| **[python-dotenv](https://github.com/theskumar/python-dotenv)** | Carrega `OPENROUTER_API_KEY` do `.env` como fallback |
+| **[pytest](https://pytest.org)** + **pytest-cov** + **pytest-mock** | Testes unitários, integração e cobertura (dev) |
+
+### Providers de LLM
+
+- **Ollama (padrão)** — modelo `gemma3:270m`; requer serviço em `http://localhost:11434`; health check antes de processar
+- **OpenRouter** — modelo padrão `nvidia/nemotron-3-super-120b-a12b:free`; requer API key (campo mascarado na UI)
+
+Textos longos são truncados automaticamente (8 000 chars Ollama / 10 000 OpenRouter) com aviso no log.
+
+---
+
+## Formato de saída JSON
+
+Cada resumo segue estrutura estável, compatível com saídas anteriores do projeto:
+
+```json
+{
+  "modelo": "gemma3:270m",
+  "requisicao": { "...": "payload enviado à LLM" },
+  "resposta": {
+    "resumo": "string",
+    "pontos_principais": ["string"],
+    "informacoes_importantes": ["string"],
+    "assuntos": ["string"]
+  }
+}
 ```
 
-## Criando ambiente virtual (separando libs do projeto das libs do sistema)
+O campo `assuntos` funciona como tags para busca futura (RAG previsto na Fase 3). Exemplo real: `pdfs/resumos/OR_Profile.json`.
 
-Navegue até a pasta do seu projeto (ex: cd cd /mnt/c/meu-projeto).
+---
+
+## Pré-requisitos
+
+- **Python 3.10+**
+- **Windows** (GUI Fase 0; Linux/macOS previstos na Fase 4)
+- Para Ollama: [Ollama instalado](https://ollama.com) com modelo baixado (`ollama pull gemma3:270m`)
+- Para OpenRouter: conta e API key em [openrouter.ai](https://openrouter.ai)
+
+---
+
+## Instalação e execução
+
+### Windows (recomendado)
+
+```powershell
+cd c:\GIT\ZAPFCOORP\py-rag-local-bot
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .
+python app.py
+```
+
+Alternativa equivalente: `python -m pdf_summarizer`
+
+### Linux / WSL (desenvolvimento e testes)
 
 ```bash
 cd /mnt/c/GIT/ZAPFCOORP/py-rag-local-bot
-```
-
-## Crie o ambiente virtual:
-
-```bash
 python3 -m venv .venv
-```
-
-## Ative o ambiente: (Vai mostrar o .venv no terminal)
-
-```bash
 source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+pip install -e .
+pytest tests/ -v --cov=pdf_summarizer --cov-report=term-missing
 ```
 
-## Instalando as Libs necessárias
+> A GUI CustomTkinter na Fase 0 é voltada ao Windows. Em WSL, use os testes automatizados; a interface gráfica requer ambiente com display (ou execução nativa no Windows).
 
-```bash
-pip install pdfplumber
+---
+
+## Configuração
+
+As preferências são salvas automaticamente ao executar ou fechar a aplicação.
+
+| Origem | Prioridade |
+|--------|------------|
+| Valores da UI (sessão atual) | 1 (mais alta) |
+| `%APPDATA%/PDFSummarizer/config.json` | 2 |
+| Variável `OPENROUTER_API_KEY` (`.env`) | 3 |
+| Defaults hardcoded | 4 |
+
+Exemplo de `config.json`:
+
+```json
+{
+  "input_dir": "C:/docs/pdfs",
+  "output_dir": "C:/docs/saida",
+  "provider": "ollama",
+  "model": "gemma3:270m",
+  "api_key": "",
+  "max_chars": 8000
+}
 ```
 
-## Teste a Instalação
+Para OpenRouter via `.env`, copie `.env-sample` para `.env` e preencha a chave:
 
-```bash
-python3 -c 'import pdfplumber; print("PDFPlumber instalado com sucesso!")'
+```env
+OPENROUTER_API_KEY=sua-api-key-aqui
 ```
 
-## Ler os PDFs na pasta `pdfs` e criar um arquivo `.txt` com o mesmo nome na pasta `resultados`
+A API key **nunca** é registrada em logs.
 
-```bash
-python3 pdf_extractor.py pdfs/
+---
+
+## Testes
+
+```powershell
+pip install -r requirements-dev.txt
+pytest tests/ -v --cov=pdf_summarizer --cov-report=term-missing
 ```
 
-# 3 Instalando Ollama com Phi3
+| Camada | Escopo |
+|--------|--------|
+| Unitários | Schema JSON, extração PDF, providers (mock), summarizer, pipeline, config |
+| Integração | Pipeline completo PDF → TXT → JSON com LLM mockado |
 
-## Instale o curl (se ainda não tiver)
+Gate de qualidade: todos os testes passando; cobertura ≥ 80% em `core/` e `services/`.
 
-```bash
-sudo apt install curl -y
-```
+---
 
-## Instale o Ollama
+## Scripts legados
 
-```bash
-curl -fsSL https://ollama.com/install.sh | sh
-```
+Antes da Fase 0, o fluxo era executado por três scripts independentes na raiz do repositório. Eles foram consolidados no pacote `pdf_summarizer` e permanecem em `legacy/` apenas como referência:
 
-## Verifique a instalação e versão do Ollama
+| Script | Função |
+|--------|--------|
+| `legacy/pdf_extractor.py` | PDF → `.txt` |
+| `legacy/summarize.py` | `.txt` → `.json` via Ollama |
+| `legacy/summarize-open-router.py` | `.txt` → `.json` via OpenRouter |
 
-```bash
-ollama --version
-```
+**Use `python app.py`** — os scripts legados não são mais mantidos.
 
-## Baixe o Phi3
+---
 
-```bash
-ollama pull phi3
-```
+## Roadmap
 
-## Testando o Phi3 no Ollama
+| Fase | Entrega |
+|------|---------|
+| **Fase 0** (atual) | App modular, GUI, testes, config persistente |
+| **Fase 1** | PyInstaller, ícone, instalador, CI |
+| **Fase 2** | Chunking de textos longos, cancelamento, drag-and-drop |
+| **Fase 3** | RAG: indexação de `assuntos`, busca local |
+| **Fase 4** | Suporte Linux/macOS na GUI |
 
-```bash
-ollama run phi3 "Poderia resumi textos para mim?"
-```
-
-# 4 Rodando a aplicação com LLM Local (Phi3)
-
-## Sumarizar os textos e criar resumos na pasta `resumos`
-
-```bash
-python3 summarize.py pdfs/
-```
-
-## Iniciar o serviço
-
-```bash
-sudo systemctl start ollama.service
-```
-
-## Parar o serviço
-
-```bash
-sudo systemctl stop ollama.service
-```
-
-## Verificar status
-
-```bash
-sudo systemctl status ollama.service
-```
-
-# 5 Rodando a aplicação com OpenRouter
-
-## Necessário configurar sua API_KEY em arquivo .env, veja exemplo no arquivo .env-sample 
-
-```bash
-pip install python-dotenv openai
-```
-
-```bash
-python3 summarize-open-router.py pdfs/
-```
+Detalhes técnicos completos: [`fase0spec.MD`](fase0spec.MD).

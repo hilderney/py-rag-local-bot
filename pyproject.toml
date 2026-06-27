@@ -1,0 +1,32 @@
+[project]
+name = "pdf-summarizer"
+version = "0.1.0"
+description = "PDF Summarizer — extração de PDF e resumo JSON via LLM"
+requires-python = ">=3.10"
+dependencies = [
+    "pdfplumber>=0.11.0",
+    "ollama>=0.4.0",
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "customtkinter>=5.2.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source_pkgs = ["pdf_summarizer"]
+omit = ["*/pdf_summarizer/ui/*"]
+
+[tool.coverage.report]
+fail_under = 80
+include = ["*/pdf_summarizer/core/*", "*/pdf_summarizer/services/*"]
+show_missing = true
