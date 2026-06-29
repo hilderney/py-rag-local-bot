@@ -1,7 +1,7 @@
 from openai import OpenAI
 
 from pdf_summarizer.core.exceptions import ConfigError, LlmError
-from pdf_summarizer.core.models import SummaryResult
+from pdf_summarizer.core.models import LlmResponse, ProviderResult
 from pdf_summarizer.core.summary.schema import (
     construir_requisicao_openrouter,
     parse_resposta_json,
@@ -32,7 +32,7 @@ class OpenRouterProvider:
     def health_check(self) -> bool:
         return bool(self._client.api_key)
 
-    def summarize(self, texto: str, model: str, user_prompt: str) -> SummaryResult:
+    def summarize(self, texto: str, model: str, user_prompt: str) -> ProviderResult:
         prompt = construir_requisicao_openrouter(texto, user_prompt)
 
         try:
@@ -44,8 +44,16 @@ class OpenRouterProvider:
                 stream=False,
             )
             conteudo = resposta_api.choices[0].message.content or ""
-            resposta = parse_resposta_json(conteudo)
+            parsed = parse_resposta_json(conteudo)
         except Exception as exc:
             raise LlmError(f"Erro na chamada OpenRouter: {exc}") from exc
 
-        return SummaryResult(modelo=model, requisicao=prompt, resposta=resposta)
+        return ProviderResult(
+            modelo=model,
+            provedor="openrouter",
+            requisicao=prompt,
+            llm_response=LlmResponse(
+                resposta=str(parsed.get("resposta", "")),
+                resumo=str(parsed.get("resumo", "")),
+            ),
+        )

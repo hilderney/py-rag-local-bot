@@ -5,9 +5,9 @@ from urllib.request import urlopen
 from ollama import chat
 
 from pdf_summarizer.core.exceptions import LlmError
-from pdf_summarizer.core.models import SummaryResult
+from pdf_summarizer.core.models import LlmResponse, ProviderResult
 from pdf_summarizer.core.summary.schema import (
-    FORMATO_RESPOSTA,
+    FORMATO_RESPOSTA_LLM,
     construir_requisicao_ollama,
     parse_resposta_json,
 )
@@ -48,6 +48,22 @@ def _texto_lengths(texto: str) -> list[int]:
     return sorted(set(lengths), reverse=True)
 
 
+def _to_provider_result(
+    model: str,
+    requisicao: dict,
+    parsed: dict,
+) -> ProviderResult:
+    return ProviderResult(
+        modelo=model,
+        provedor="ollama",
+        requisicao=requisicao,
+        llm_response=LlmResponse(
+            resposta=str(parsed.get("resposta", "")),
+            resumo=str(parsed.get("resumo", "")),
+        ),
+    )
+
+
 class OllamaProvider:
     """Provider LLM via Ollama local."""
 
@@ -61,7 +77,7 @@ class OllamaProvider:
         except (URLError, OSError, TimeoutError):
             return False
 
-    def summarize(self, texto: str, model: str, user_prompt: str) -> SummaryResult:
+    def summarize(self, texto: str, model: str, user_prompt: str) -> ProviderResult:
         last_error: LlmError | None = None
         for size in _texto_lengths(texto):
             try:
@@ -72,7 +88,7 @@ class OllamaProvider:
         assert last_error is not None
         raise last_error
 
-    def _summarize_texto(self, texto: str, model: str, user_prompt: str) -> SummaryResult:
+    def _summarize_texto(self, texto: str, model: str, user_prompt: str) -> ProviderResult:
         requisicao = construir_requisicao_ollama(texto, user_prompt)
         mensagem = json.dumps(requisicao, ensure_ascii=False)
         last_json_error: json.JSONDecodeError | None = None
@@ -83,7 +99,7 @@ class OllamaProvider:
                     model=model,
                     messages=[{"role": "user", "content": mensagem}],
                     stream=False,
-                    format=FORMATO_RESPOSTA,
+                    format=FORMATO_RESPOSTA_LLM,
                     options=OLLAMA_CHAT_OPTIONS,
                 )
                 resposta_completa = _extrair_conteudo_resposta(response)
@@ -91,12 +107,8 @@ class OllamaProvider:
                     raise LlmError("Resposta vazia do Ollama")
 
                 try:
-                    resposta = parse_resposta_json(resposta_completa)
-                    return SummaryResult(
-                        modelo=model,
-                        requisicao=requisicao,
-                        resposta=resposta,
-                    )
+                    parsed = parse_resposta_json(resposta_completa)
+                    return _to_provider_result(model, requisicao, parsed)
                 except json.JSONDecodeError as exc:
                     last_json_error = exc
 

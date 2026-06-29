@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pdf_summarizer.core.models import SummaryResult
+from pdf_summarizer.core.models import LlmResponse, ProviderResult
 
 
 @pytest.fixture
@@ -36,14 +36,13 @@ def tmp_output_dir(tmp_path: Path) -> Path:
 def mock_llm_provider(mocker):
     provider = mocker.Mock()
     provider.health_check.return_value = True
-    provider.summarize.return_value = SummaryResult(
+    provider.summarize.return_value = ProviderResult(
         modelo="test-model",
+        provedor="ollama",
         requisicao={"texto": "sample"},
-        resposta={
-            "resumo": "Resumo de teste",
-            "pontos_principais": ["ponto 1"],
-            "informacoes_importantes": ["info 1"],
-            "assuntos": ["tag1"],
-        },
+        llm_response=LlmResponse(
+            resposta="Resposta de teste",
+            resumo="Meta resumo",
+        ),
     )
     return provider

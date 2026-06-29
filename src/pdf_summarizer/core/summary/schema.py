@@ -1,34 +1,26 @@
 import json
 
-FORMATO_RESPOSTA = {
+FORMATO_RESPOSTA_LLM = {
     "type": "object",
     "properties": {
+        "resposta": {"type": "string"},
         "resumo": {"type": "string"},
-        "pontos_principais": {"type": "array", "items": {"type": "string"}},
-        "informacoes_importantes": {"type": "array", "items": {"type": "string"}},
-        "assuntos": {"type": "array", "items": {"type": "string"}},
     },
-    "required": ["resumo", "pontos_principais", "informacoes_importantes", "assuntos"],
+    "required": ["resposta", "resumo"],
 }
 
-REQUIRED_RESPONSE_FIELDS = FORMATO_RESPOSTA["required"]
+REQUIRED_LLM_FIELDS = FORMATO_RESPOSTA_LLM["required"]
 
 FORMATO_RESPOSTA_DESCRICAO = {
-    "resumo": "string",
-    "pontos_principais": ["string"],
-    "informacoes_importantes": ["string"],
-    "assuntos": ["string"],
+    "resposta": "string (resposta completa ao pedido do usuário)",
+    "resumo": (
+        "string (explicação ultra resumida do que foi entendido da requisição, "
+        "da resposta e por que essa resposta foi escolhida)"
+    ),
 }
 
 DEFAULT_USER_PROMPT = (
-    "Faça um resumo conciso e claro do texto fornecido. "
-    "Destaque os pontos principais e as informações mais importantes. "
-    "Responda em português do Brasil. "
-    "Crie os assuntos como se fossem tags para um sistema de busca. "
-    "Limite cada lista (pontos_principais, informacoes_importantes, assuntos) "
-    "a no máximo 10 itens. "
-    "Para textos tabulares ou listas longas, agrupe em categorias em vez de "
-    "enumerar cada linha."
+    "Analise o texto fornecido e responda ao pedido do usuário em português do Brasil."
 )
 
 
@@ -49,10 +41,11 @@ def construir_requisicao_openrouter(
 ) -> str:
     """Monta o prompt em linguagem natural para OpenRouter."""
     schema = {
-        "resumo": "string (resumo ou síntese da análise)",
-        "pontos_principais": "array de strings (principais tópicos)",
-        "informacoes_importantes": "array de strings (detalhes relevantes)",
-        "assuntos": "array de strings (tags para busca)",
+        "resposta": "string (resposta completa ao pedido)",
+        "resumo": (
+            "string (explicação ultra resumida do que entendeu da requisição, "
+            "da resposta e por que escolheu essa resposta)"
+        ),
     }
 
     prompt = f"""
@@ -79,10 +72,10 @@ def parse_resposta_json(conteudo: str) -> dict:
     return json.loads(conteudo)
 
 
-def validate_resposta(resposta: dict) -> None:
-    """Valida presença dos campos obrigatórios na resposta."""
+def validate_resposta_llm(resposta: dict) -> None:
+    """Valida presença dos campos obrigatórios na resposta da LLM."""
     from pdf_summarizer.core.exceptions import LlmParseError
 
-    for campo in REQUIRED_RESPONSE_FIELDS:
+    for campo in REQUIRED_LLM_FIELDS:
         if campo not in resposta:
             raise LlmParseError(f"Campo obrigatório ausente na resposta: {campo}")

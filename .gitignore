@@ -4,3 +4,7 @@ __pycache__/
 pdfs/
 resultados/
 resumos/
+build/
+dist/
+installer/output/
+*.spec.bak

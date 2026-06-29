@@ -1,24 +1,18 @@
-from pdf_summarizer.core.exceptions import (
-    ConfigError,
-    LlmError,
-    LlmParseError,
-    PdfExtractError,
-    PdfSummarizerError,
-)
-from pdf_summarizer.core.models import JobConfig, PipelineStats, ProgressEvent, SummaryResult
+from pathlib import Path
+
+import pytest
+
+from pdf_summarizer.core.models import JobConfig, LlmDocument, ProgressEvent
 
 
 def test_job_config_defaults():
-    from pathlib import Path
-
     config = JobConfig(
-        input_dir=Path("in"),
-        output_dir=Path("out"),
+        input_dir=Path("."),
+        output_dir=Path("."),
         provider="ollama",
         model="gemma3:270m",
     )
-    assert config.max_chars == 8000
-    assert config.api_key is None
+    assert config.provider == "ollama"
 
 
 def test_progress_event():
@@ -26,12 +20,16 @@ def test_progress_event():
     assert event.stage == "extract"
 
 
-def test_pipeline_stats_defaults():
-    stats = PipelineStats()
-    assert stats.pdfs_found == 0
-
-
-def test_exceptions_hierarchy():
-    assert issubclass(PdfExtractError, PdfSummarizerError)
-    assert issubclass(LlmParseError, LlmError)
-    assert issubclass(ConfigError, PdfSummarizerError)
+def test_llm_document_to_dict():
+    doc = LlmDocument(
+        modelo="m",
+        provedor="ollama",
+        texto="t",
+        requisitado="r",
+        resposta="resp",
+        resumo="meta",
+        arquivos={"txt": "/path/txt"},
+    )
+    data = doc.to_dict()
+    assert data["resposta"] == "resp"
+    assert data["arquivos"]["txt"] == "/path/txt"

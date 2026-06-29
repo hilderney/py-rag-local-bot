@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pdf_summarizer.core.summary.schema import DEFAULT_USER_PROMPT
 
@@ -18,30 +18,79 @@ class JobConfig:
 
 @dataclass
 class ProgressEvent:
-    stage: Literal["extract", "summarize", "info", "error", "done"]
+    stage: Literal["extract", "table", "summarize", "info", "error", "done"]
     filename: str
     message: str
 
 
 @dataclass
-class PipelineStats:
+class ExtractStats:
     pdfs_found: int = 0
     extracted: int = 0
-    summarized: int = 0
+    failed: int = 0
+
+
+@dataclass
+class TableStats:
+    files_found: int = 0
+    tables_extracted: int = 0
     skipped: int = 0
     failed: int = 0
 
 
 @dataclass
-class SummaryResult:
-    modelo: str
-    requisicao: str | dict
-    resposta: dict
+class LlmStats:
+    files_found: int = 0
+    processed: int = 0
+    skipped: int = 0
+    failed: int = 0
 
 
 @dataclass
-class SummarizeOutcome:
-    result: SummaryResult
+class LlmResponse:
+    """Resposta parseada da LLM ({resposta, resumo})."""
+
+    resposta: str
+    resumo: str
+
+
+@dataclass
+class ProviderResult:
+    """Resultado bruto do provider antes de montar o documento final."""
+
+    modelo: str
+    provedor: Literal["ollama", "openrouter"]
+    requisicao: str | dict
+    llm_response: LlmResponse
+
+
+@dataclass
+class LlmDocument:
+    """Documento JSON salvo em respostas/*.json."""
+
+    modelo: str
+    provedor: str
+    texto: str
+    requisitado: str
+    resposta: str
+    resumo: str
+    arquivos: dict[str, str | None] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "modelo": self.modelo,
+            "provedor": self.provedor,
+            "texto": self.texto,
+            "requisitado": self.requisitado,
+            "resposta": self.resposta,
+            "resumo": self.resumo,
+            "arquivos": self.arquivos,
+        }
+
+
+@dataclass
+class LlmOutcome:
+    document: LlmDocument
     truncated: bool = False
 
 

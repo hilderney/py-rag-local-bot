@@ -1,10 +1,10 @@
 from typing import Protocol
 
-from pdf_summarizer.core.models import JobConfig, SummaryResult
+from pdf_summarizer.core.models import JobConfig, ProviderResult
 
 
 class LLMProvider(Protocol):
-    def summarize(self, texto: str, model: str, user_prompt: str) -> SummaryResult: ...
+    def summarize(self, texto: str, model: str, user_prompt: str) -> ProviderResult: ...
 
     def health_check(self) -> bool: ...
 

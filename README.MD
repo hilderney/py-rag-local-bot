@@ -167,6 +167,94 @@ pytest tests/ -v --cov=pdf_summarizer --cov-report=term-missing
 
 ---
 
+## Executável e instalador Windows
+
+O app pode ser empacotado como `.exe` (PyInstaller) e instalado como aplicativo Windows (Inno Setup), em `Arquivos de Programas`, com atalhos e desinstalador.
+
+### Pré-requisitos de build
+
+| Ferramenta | Uso | Download |
+|------------|-----|----------|
+| **Python 3.10+** + venv | Gerar o executável | já usado no desenvolvimento |
+| **PyInstaller** | Empacota `dist\PDFSummarizer\` | instalado automaticamente pelo script |
+| **Inno Setup 6** | Gera o instalador `.exe` | [jrsoftware.org/isdl.php](https://jrsoftware.org/isdl.php) |
+
+Instalação rápida do Inno Setup (opcional):
+
+```powershell
+winget install --id JRSoftware.InnoSetup -e
+```
+
+### Build automatizado (recomendado)
+
+Na raiz do repositório, com o venv ativo ou não:
+
+```powershell
+# Apenas executável portátil (pasta dist\PDFSummarizer\)
+.\scripts\build.ps1
+
+# Executável + instalador Windows
+.\scripts\build.ps1 -Installer
+```
+
+**Saídas:**
+
+| Artefato | Caminho |
+|----------|---------|
+| App portátil | `dist\PDFSummarizer\PDFSummarizer.exe` |
+| Instalador | `installer\output\PDFSummarizer-Setup-0.1.0.exe` |
+
+Distribua a pasta `dist\PDFSummarizer\` inteira **ou** o instalador `PDFSummarizer-Setup-*.exe` (recomendado para usuários finais).
+
+### O que o instalador faz
+
+- Copia todos os arquivos para `C:\Program Files\PDFSummarizer\`
+- Cria atalho no **Menu Iniciar**
+- Opcionalmente atalho na **Área de trabalho**
+- Registra desinstalador em **Configurações → Aplicativos**
+- Oferece abrir o app ao final da instalação
+
+A configuração do usuário (`%APPDATA%\PDFSummarizer\config.json`) **não** fica na pasta de instalação e é preservada entre atualizações.
+
+> **Ollama não vem no instalador.** O usuário final ainda precisa instalar o [Ollama](https://ollama.com) e baixar o modelo (`ollama pull gemma3:270m`) para usar LLM local.
+
+### Build manual (passo a passo)
+
+```powershell
+cd c:\GIT\ZAPFCOORP\py-rag-local-bot
+.venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .
+pip install pyinstaller
+
+pyinstaller PDFSummarizer.spec
+```
+
+Teste: `dist\PDFSummarizer\PDFSummarizer.exe`
+
+> Feche o app antes de rebuildar — arquivos em `dist\` podem ficar bloqueados se o executável estiver em execução.
+
+Com **Inno Setup 6** instalado:
+
+```powershell
+& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\PDFSummarizer.iss
+```
+
+Ou abra `installer\PDFSummarizer.iss` no **Inno Setup Compiler** e compile (Ctrl+F9).
+
+### Arquivos de build no repositório
+
+```text
+PDFSummarizer.spec          # Configuração PyInstaller
+installer/
+  PDFSummarizer.iss         # Script Inno Setup
+  output/                   # Instalador gerado (gitignored)
+scripts/
+  build.ps1                 # Automação build + instalador
+```
+
+---
+
 ## Configuração
 
 As preferências são salvas automaticamente ao executar ou fechar a aplicação.
@@ -236,7 +324,7 @@ Antes da Fase 0, o fluxo era executado por três scripts independentes na raiz d
 | Fase | Entrega |
 |------|---------|
 | **Fase 0** (atual) | App modular, GUI, testes, config persistente |
-| **Fase 1** | PyInstaller, ícone, instalador, CI |
+| **Fase 1** (em andamento) | PyInstaller, instalador Inno Setup, CI |
 | **Fase 2** | Chunking de textos longos, cancelamento, drag-and-drop |
 | **Fase 3** | RAG: indexação de `assuntos`, busca local |
 | **Fase 4** | Suporte Linux/macOS na GUI |
